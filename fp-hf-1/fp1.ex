@@ -1,0 +1,87 @@
+defmodule Khf1 do
+
+  @moduledoc """
+  Minimális számú dolgozó elküldése képzésre 
+  @author "Gutbrod Ádám  <gutbrod@edu.bme.hu>" 
+  @date   "2026-10-06" 
+  """ 
+
+  @type dolgozo() :: integer()
+  @type fonok() :: dolgozo() | nil
+
+  @spec kepzes(vallalat :: [fonok()]) ::  {darab :: integer(), elkuld :: [dolgozo()]}
+
+  # A vallalat hierarchikus vállalatban a képzésre küldendő dolgozók minimális száma darab,
+  # ami például úgy érthető el, hogy az elkuld (azonosító szerint növekvő sorrendű)
+  # listában található dolgozókat küldjük el a képzésre.
+  
+  def kepzes(vallalat) do
+    gyerekek =
+      vallalat
+      |> Enum.with_index()
+      |> Enum.reduce(%{}, fn {fonok, dolgozo}, acc ->
+        if fonok == nil do
+          acc
+        else
+          Map.update(acc, fonok, [dolgozo], fn lista ->
+            [dolgozo | lista]
+          end)
+        end
+      end)
+
+    igazgato =
+      Enum.find_index(vallalat, fn fonok -> fonok == nil end)
+
+    {kepzes_ha_kuldve, kepzes_ha_nem_kuldve} =
+      dp(igazgato, gyerekek)
+
+    eredmeny =
+      if elem(kepzes_ha_kuldve, 0) <= elem(kepzes_ha_nem_kuldve, 0) do
+        kepzes_ha_kuldve
+      else
+        kepzes_ha_nem_kuldve
+      end
+
+    {elem(eredmeny, 0), elem(eredmeny, 1) |> Enum.sort()}
+  end
+
+  defp dp(dolgozo, gyerekek) do
+  gyerekek
+  |> Map.get(dolgozo, [])
+  |> Enum.reduce(
+    {{1, [dolgozo]}, {0, []}},
+    fn gyerek, {kuldve, nem_kuldve} ->
+
+      {gyerek_kuldve, gyerek_nem_kuldve} =
+        dp(gyerek, gyerekek)
+
+      {kuldve_db, kuldve_lista} = kuldve
+      {nem_kuldve_db, nem_kuldve_lista} = nem_kuldve
+
+      {gy_kuldve_db, gy_kuldve_lista} =
+        gyerek_kuldve
+
+      {gy_nem_kuldve_db, gy_nem_kuldve_lista} =
+        gyerek_nem_kuldve
+
+      {jobb_db, jobb_lista} =
+        if gy_kuldve_db <= gy_nem_kuldve_db do
+          {gy_kuldve_db, gy_kuldve_lista}
+        else
+          {gy_nem_kuldve_db, gy_nem_kuldve_lista}
+        end
+
+      uj_kuldve =
+        {kuldve_db + jobb_db,
+         kuldve_lista ++ jobb_lista}
+
+      uj_nem_kuldve =
+        {nem_kuldve_db + gy_kuldve_db,
+         nem_kuldve_lista ++ gy_kuldve_lista}
+
+      {uj_kuldve, uj_nem_kuldve}
+    end
+  )
+end
+
+end
